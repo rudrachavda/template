@@ -103,6 +103,15 @@ tight rhythm inside compact controls. Half-steps other than that (`0.5`=2px,
 in-between icon size like 18px becomes `size-4`(16px) or `size-5`(20px), not
 `size-4.5`).
 
+**Scrollbars are hidden, matching `bento`**: a `.no-scrollbar` utility class
+exists (`app/globals.css`) for one-off opt-in cases, but the actual reason no
+scrollbar ever shows is a global rule — `* { scrollbar-width: none }` plus
+`*::-webkit-scrollbar { display: none }` — copied from `bento/app/globals.css`.
+Applying `.no-scrollbar` to just `<body>` doesn't hide it reliably: when
+`<body>` has no constrained height, the page's real scroll container is
+`<html>`, not `<body>`, and a class on the wrong element does nothing. The
+global `*` rule sidesteps having to know which element ends up scrolling.
+
 ## 4. Shape Language — Squircle
 
 `components/ui/squircle/` renders a true superellipse via SVG path, not CSS

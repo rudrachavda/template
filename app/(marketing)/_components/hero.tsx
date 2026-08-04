@@ -23,11 +23,15 @@ const LINE_COLOR = "text-[rgba(29,29,29,0.12)] dark:text-[rgba(240,240,240,0.14)
 
 function VerticalLine({ side, className }: { side: "left" | "right", className?: string }) {
     return (
-        <div
+        <motion.div
             aria-hidden
+            // Start at 0 height, and grow to cover the container plus the 200px overhang (100px top + 100px bottom)
+            initial={{ height: 0 }}
+            whileInView={{ height: "calc(100% + 200px)" }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: "easeOut" }}
             className={cn(
-                // Negative top/bottom pulls the lines out to make them longer
-                "absolute top-[-0px] bottom-[-100px] w-px", 
+                "absolute top-[-100px] w-px origin-top",
                 "[background-image:repeating-linear-gradient(to_bottom,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
                 "[mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]",
                 LINE_COLOR,
@@ -41,11 +45,15 @@ function VerticalLine({ side, className }: { side: "left" | "right", className?:
 function HorizontalLine({ className }: { className?: string }) {
     return (
         <div className={cn("relative w-full h-px", className)}>
-            <div
+            <motion.div
                 aria-hidden
+                // Start at 0 width, and grow to cover the container plus the 200px overhang (100px left + 100px right)
+                initial={{ width: 0 }}
+                whileInView={{ width: "calc(100% + 200px)" }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 className={cn(
-                    // Negative left/right pulls the lines out to make them longer
-                    "absolute left-[-100px] right-[-100px] top-0 h-px",
+                    "absolute left-[-100px] top-0 h-px origin-left",
                     "[background-image:repeating-linear-gradient(to_right,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
                     "[mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]",
                     LINE_COLOR,
@@ -91,28 +99,28 @@ export function Hero() {
                         <VerticalLine side="left" />
 
                         {/* Title Section */}
-                        <motion.div variants={item} className="relative w-full flex flex-col items-center justify-center p-6">
+                        <div className="relative w-full flex flex-col items-center justify-center p-6">
                             <Text
                                 variant="title"
                                 as="h1"
-                                className="text-[clamp(3rem,5vw,4.75rem)] font-semibold tracking-tighter leading-none text-center"
+                                className="text-[clamp(3rem,5vw,4.75rem)] font-semibold tracking-tighter leading-none text-center text-balance"
                             >
 								A React Framework for the web. 
                             </Text>
                             <GridCircle className="-bottom-8 -right-8" rotate={180} />
-                        </motion.div>
+                        </div>
                         <HorizontalLine />
 
                         {/* Subtitle Section */}
-                        <motion.div variants={item} className="relative w-full flex flex-col items-center justify-center py-8 sm:py-12 px-6">
+                        <div className="relative w-full flex flex-col items-center justify-center py-8 sm:py-12 px-6">
                             <Text variant="secondary" as="p" className="text-base leading-relaxed sm:text-lg max-w-2xl text-center">
                                 A design system, a component library, and a folder layout — ready to go before you write a single feature.
                             </Text>
-                        </motion.div>
+                        </div>
                         <HorizontalLine />
 
                         {/* Footer / Buttons Section */}
-                        <motion.div variants={item} className="relative w-full flex flex-col items-center justify-start">
+                        <div className="relative w-full flex flex-col items-center justify-start">
                             <div className="relative flex flex-col items-center justify-start gap-6 px-8 py-8 sm:px-14 sm:py-10">
                                 <VerticalLine side="left" />
                                 <VerticalLine side="right" />
@@ -128,7 +136,7 @@ export function Hero() {
                                     <Copy text="npm run dev" label="Copy dev command" />
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                         <HorizontalLine />
 
                         <VerticalLine side="right" />

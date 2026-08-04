@@ -18,7 +18,7 @@ const MarketingLayout = ({
 			<Footer />
 			<Shadow
 				elevation={0.3}
-				intensity={0.3}
+				intensity={0.1}
 				className="relative z-10 flex min-h-screen flex-col bg-[#fefefe] dark:bg-[#121212]"
 			>
 				<Navbar />
