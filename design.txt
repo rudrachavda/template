@@ -371,8 +371,131 @@ No icon registry or icon font. Two sources only:
 logic (`<p className="...">{description}</p>`) shouldn't be broken across
 three lines just because it has a long class string.
 
+## 10. App Shell — Sidebar & Content Pane (`app/(main)/`)
+
+`app/(main)/layout.tsx` composes two pieces, both in `_components/`:
+`Sidebar` (the nav rail) and `ContentPane` (the main content area). Every
+page under `(main)` — `/style-guide`, `/app`, anything added later — gets
+this shell automatically; `(main)` has no `page.tsx` of its own, since that
+would collide with `(marketing)`'s at `/` (two route groups resolving the
+same path is a build error). The sidebar app's own pages live under
+`(main)/app/...`.
+
+- **Two-state collapse, not free-drag resize (desktop).** `Sidebar` toggles
+  between a fixed icon-rail width (`w-16`) and a fixed expanded width
+  (`w-64`) via one `transition-[width]` class — no mousemove-driven drag
+  handle. A prior from-scratch sidebar (in a sibling project, not this one)
+  implemented free resize with a ref-mutated width on the `<aside>` mirrored
+  into a *second*, separately-positioned nav element's `left`/`width` via
+  duplicated math on every pointer-move event — two independent DOM writes
+  that can fall a frame out of sync, which is what actually read as
+  "jittery" there. This implementation has no second element to keep in
+  sync at all: the content pane is a plain `flex-1` sibling in the same flex
+  row, so it always exactly fills the remaining space with zero manual
+  width math, automatically in lockstep with the sidebar's own width
+  transition.
+- **Icon position is never conditional on `collapsed`, on purpose.** Every
+  icon-bearing row (`SidebarItem`, the header's toggle button, the footer
+  slot) uses one constant padding value in both states, chosen to exactly
+  fill the rail's known *collapsed* width: `md:w-16` (64px) minus `nav`'s
+  `p-2` (8px × 2) leaves 48px for `SidebarItem`, and a 16px icon in `px-4`
+  (16px × 2) accounts for exactly those 48px — so it's centered with equal
+  margins in the collapsed rail by construction, not by eyeballing it. Same
+  arithmetic gives the header/footer icons `px-3` against their 40px
+  `Button`s. Using that *same* value in the expanded state too (rather than
+  a smaller "normal list" padding) means the padding never changes between
+  states at all — nothing to transition, nothing that can visibly move,
+  full stop. Two earlier versions tried conditional values here instead:
+  first `justify-center` (snaps instantly, since browsers don't interpolate
+  it, so the icon jumped straight to the center of whatever width the
+  `<aside>` happened to be at that instant rather than easing there), then
+  an *animated* padding change between two different values (smoother, but
+  still a real, if small, position shift on every toggle). Only the
+  trailing label's presence and the container's own width change now — the
+  icon itself is simply never touched.
+- **`SidebarItem` also pins its own row height (`min-h-9`), for the same
+  reason.** Without it, the row's height comes from its tallest content —
+  the label's `text-sm` line-height (20px) when present, vs. the bare 16px
+  icon when it isn't — so hiding the label on collapse shrank the row by a
+  few px on every toggle, moving the icon vertically the same way the
+  padding issue above moved it horizontally. `min-h-9` (36px) is a no-op
+  when the label's line-height already clears it and a floor when the icon
+  alone wouldn't, so the row — and the icon inside it — is exactly as tall
+  in both states.
+- **Labels are a plain conditional render, not an `AnimatePresence`/
+  `motion.span` fade.** A Framer Motion exit animation and the CSS
+  `transition-[width]` are two independent animation engines with no shared
+  clock — running both for the same collapse/expand gesture is the same
+  "two systems that can fall out of step" problem the free-drag write-up
+  above already calls out, just between two animation libraries instead of
+  two DOM writes. Labels disappear the instant `collapsed` flips; the width
+  transition alone carries the perceived motion.
+- **Mobile**: below the `md` breakpoint a persistent icon rail has no useful
+  width to collapse to — there's no room for both a rail and real content on
+  a phone. `Sidebar` is fully off-canvas by default there and slides in as a
+  `fixed inset-y-0 left-0` overlay animated via `transform` (a compositor-
+  only property, no layout recalculation per frame, unlike the desktop
+  `width` transition) with a `bg-black/40` backdrop. A `md:hidden` hamburger
+  trigger reopens it — the toggle button inside the sidebar itself is
+  unreachable while off-canvas, and on mobile it closes the drawer instead
+  of collapsing to a rail (there's no rail state on mobile). The drawer also
+  auto-closes on navigation, via `useMediaQuery` (`hooks/use-media-query.ts`,
+  same `useSyncExternalStore` shape as `useMounted`) gating which behavior
+  applies, and a render-time comparison against the last-seen `pathname` —
+  see the hook and component source for why this isn't a `useEffect`.
+  **Gotcha**: `useMediaQuery`'s `subscribe`/`getSnapshot` must be
+  `useCallback`-memoized on the query string. Passing new inline arrow
+  functions on every render made React tear down and rebuild the
+  `matchMedia` subscription every render instead of once, which was enough
+  to leave the hook permanently stuck on the server/hydration snapshot
+  (`false`) instead of ever picking up the real client value — a real bug
+  hit and fixed during this component's own build, not a hypothetical.
+- **Color**: the sidebar is the secondary-surface tier (`#f0f0f0`/`#171717`,
+  same as `variant="secondary"` buttons), visually distinct from the content
+  pane's plain `#fefefe`/`#121212` background tier — deliberately not the
+  same tone the way a stock ChatGPT-style sidebar and its content pane read
+  as one flat surface. A hairline border (`--border-hairline`) separates the
+  two.
+- **The content pane is full-bleed, not a floating card.** `ContentPane` is
+  a plain `<main>`, flush against the browser window's top/right/bottom
+  edges — no margin, no padding, no rounded corners. An earlier version
+  wrapped it in a `Squircle` with a `drop-shadow` for a floating-card look;
+  that meant `Squircle`'s `ResizeObserver` recomputing and repainting an SVG
+  corner path on every frame of the sidebar's width transition, stacked on
+  top of a `drop-shadow` filter repaint on those same frames — real,
+  avoidable per-frame cost sitting directly on top of the sidebar's own
+  layout-triggering width transition, and a likely contributor to the
+  collapse/expand animation reading as jittery. Removing the card fixed
+  that as much as it changed the look.
+- **The shadow is one-sided**, only on the edge facing the sidebar — a plain
+  `box-shadow` with a negative x-offset and no y-offset
+  (`shadow-[-12px_0_24px_-12px_rgba(28,29,33,0.18)]`), not a shadow on all
+  four sides. The other three edges are the viewport's own edges (no margin
+  to cast a shadow into), so this is really just "don't waste a shadow layer
+  on edges nothing can see it against." A plain `box-shadow` works safely
+  here specifically *because* the pane is a plain rectangle again — the
+  Squircle/box-shadow incompatibility in §4/§5 no longer applies once
+  there's no superellipse edge to clip against. Disabled entirely in dark
+  mode (`dark:shadow-none`), not dimmed — same card-idiom convention as
+  everywhere else; the sidebar's own hairline border is what still separates
+  the two surfaces there.
+- **Data-driven, not hardcoded**: `Sidebar` takes `items` (pinned top
+  actions), `children` (the scrollable, app-specific middle region —
+  `.no-scrollbar`, so it hides the scrollbar without removing scrolling),
+  and `footer` (account menu, `ThemeToggle`, whatever). None of that content
+  lives in `Sidebar` itself — same recurring-question test as §6: this
+  component owns the shape/behavior, the call site supplies the content.
+- `MainLayout` is a client component (`"use client"`) despite doing no
+  client-only work of its own — it constructs `items` with real
+  `LucideIcon` component references, which can't cross a Server → Client
+  Component boundary as props (React can only serialize plain data across
+  that boundary, not functions). `children` still passes through fine —
+  already-rendered content from further down the tree works the same way
+  through a client layout as through a server one.
+
 ## Not yet built (later phases of this template, not this pass)
 
-Sidebar app shell, `actions/`, `db/`, auth. The design system atoms are
-demoed on `app/style-guide/page.tsx`; `app/(marketing)/` is the landing page
-built on top of them.
+`actions/`, `db/`, auth. The design system atoms are demoed on
+`app/(main)/style-guide/page.tsx`; `app/(marketing)/` is the public landing
+page built on top of them, separate from the sidebar app shell in
+`app/(main)/`.
