@@ -47,10 +47,47 @@
  */
 :root {
   --border-hairline: rgba(225, 228, 232, 0.8);
+
+  /*
+   * Button color tiers — see design.txt §6. These back the Button
+   * component's "main"/"primary"/"secondary" variants via the
+   * currentColor-fill idiom (referenced as `text-[var(--color-button-*)]`).
+   * Re-brand every button in the app by editing these three tiers here,
+   * nothing in buttons.tsx needs to change. Distinct from the general
+   * --color-primary-surface/--color-secondary-surface tokens above (those
+   * are for non-button surfaces) even where the values happen to match.
+   */
+  --color-button-main: #0069cc;
+  --color-button-main-hover: #005bb3;
+  --color-button-main-label: #fefefe;
+  --color-button-main-label-hover: #f0f0f0;
+
+  --color-button-primary: #fafafa;
+  --color-button-primary-hover: #e5e5e5;
+  --color-button-primary-label: #121212;
+  --color-button-primary-label-hover: #ededed;
+
+  --color-button-secondary: #f0f0f0;
+  --color-button-secondary-hover: #e5e5e5;
+  --color-button-secondary-label: #1d1d1d;
 }
 
 .dark {
   --border-hairline: rgba(29, 29, 29, 0.8);
+
+  --color-button-main: #50aef6;
+  --color-button-main-hover: #74c0ff;
+  --color-button-main-label: #121212;
+  --color-button-main-label-hover: #1a1a1a;
+
+  --color-button-primary: #1d1d1d;
+  --color-button-primary-hover: #1f1f1f;
+  --color-button-primary-label: #f0f0f0;
+  --color-button-primary-label-hover: #a1a1a1;
+
+  --color-button-secondary: #171717;
+  --color-button-secondary-hover: #1f1f1f;
+  --color-button-secondary-label: #f0f0f0;
 }
 
 ::selection {
@@ -81,7 +118,7 @@
 
 .font-sans {
   /* Optical size locked to text mode, not display */
-  font-variation-settings: "opsz" 14;
+  font-variation-settings: "opsz" 32;
 
   font-feature-settings:
     "calt" 1,

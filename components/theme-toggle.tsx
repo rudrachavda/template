@@ -12,7 +12,7 @@ export function ThemeToggle() {
 	const isDark = mounted && resolvedTheme === 'dark';
 
 	return (
-		<Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setTheme(isDark ? 'light' : 'dark')}>
+		<Button variant="secondary" size="icon" aria-label="Toggle theme" onClick={() => setTheme(isDark ? 'light' : 'dark')}>
 			<AnimatePresence mode="popLayout" initial={false}>
 				<motion.span
 					key={isDark ? 'moon' : 'sun'}

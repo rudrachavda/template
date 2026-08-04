@@ -4,10 +4,10 @@ import { motion, type Variants } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export const styles = {
-	title: 'text-sm leading-snug font-semibold tracking-normal text-pretty text-[#1d1d1d] dark:text-[#f0f0f0] dark:antialiased',
-	subtitle: 'text-sm leading-snug font-medium tracking-normal text-pretty text-[#646464]',
-	paragraph: 'text-sm leading-relaxed font-medium tracking-normal text-[#1d1d1d] md:text-pretty dark:text-[#f0f0f0] dark:antialiased',
-	secondary: 'text-sm leading-relaxed font-medium tracking-normal text-[#a1a1a1] md:text-pretty',
+	title: 'text-sm leading-snug font-semibold tracking-wide text-pretty text-[#1d1d1d] dark:text-[#f0f0f0] dark:antialiased',
+	subtitle: 'text-sm leading-snug font-medium tracking-wide text-pretty text-[#646464]',
+	paragraph: 'text-sm leading-relaxed font-medium tracking-wide text-[#1d1d1d] md:text-pretty dark:text-[#f0f0f0] dark:antialiased',
+	secondary: 'text-sm leading-relaxed font-medium tracking-wide text-[#a1a1a1] md:text-pretty',
 	label: 'text-sm leading-relaxed font-medium tracking-wide text-[#646464] uppercase md:text-pretty',
 };
 

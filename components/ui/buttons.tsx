@@ -3,10 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "motion/react";
 import { Squircle } from "@/components/ui/squircle/Squircle";
-import { CONTROL_H, CONTROL_H_LG, CONTROL_H_SM, radiusFor } from "@/components/ui/squircle/tokens";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/hooks/use-mounted";
 
 // --- Button ---
 // General-purpose button: every clickable "shape" paints its own surface as a
@@ -14,42 +15,99 @@ import { cn } from "@/lib/utils";
 // background), label/icon sit in a `relative z-10` layer above it. No
 // Magnetic here on purpose — that's a special-occasion detail for one-off
 // moments (see design.txt §6), not a default every button gets.
+//
+// Shape (radius/exponent/smoothing) and layout (padding/gap/text-size, via
+// className) are both fully open — `size`/`pill` are convenience defaults,
+// not a closed set of allowed shapes. Nothing here forces an exact
+// width/height via inline style, so overriding padding/height through
+// className, or the corner curvature through radius/exponent/smoothing,
+// always works instead of silently losing to a hardcoded value.
 
-export type ButtonVariant = "solid" | "outline" | "ghost";
+export type ButtonVariant = "solid" | "outline" | "ghost" | "secondary" | "primary" | "main" | "unstyled";
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 function isExternalHref(href: string) {
 	return /^([a-z][a-z0-9+.-]*:)?\/\//i.test(href) || href.startsWith("mailto:") || href.startsWith("tel:");
 }
 
-const HEIGHT: Record<ButtonSize, number> = {
-	sm: CONTROL_H_SM,
-	md: CONTROL_H,
-	lg: CONTROL_H_LG,
-	icon: CONTROL_H,
+// Starting padding/gap/text-size per size — a default, not a cap. Override
+// any of it through className (e.g. `px-10 text-lg`); twMerge resolves the
+// conflict since there's no competing inline style fighting it.
+//
+// Explicit `min-h-*` on every size (not just padding) is what actually keeps
+// them aligned: without it, height is an emergent side effect of
+// line-height + padding, which don't scale the same way padding-only sizing
+// implies — `icon`'s `p-2` around a 16px glyph lands at 32px while `md`'s
+// text-sm/leading-relaxed content lands closer to 39px, so the two look
+// mismatched next to each other (e.g. ThemeToggle beside a secondary text
+// button) even though neither one's padding is "wrong" on its own.
+//
+// Each `min-h` is picked to exceed that size's own natural (line-height +
+// padding) content height — otherwise it's a no-op floor that never actually
+// applies, which is exactly what happened the first time through this: `md`
+// alone lands past its own min-h-9 floor from line-height, so only `icon`
+// (whose content is shorter than its floor) actually changed, and the two
+// still didn't match. `min-h` is still a floor, not a cap — content taller
+// than it still grows the button — but for the sizes below it's the number
+// that actually determines the rendered height, not merely a suggestion.
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+	sm: "gap-1.5 px-3 py-2 min-h-9 text-xs",
+	md: "gap-2 px-4 py-2 min-h-10 text-sm",
+	lg: "gap-2.5 px-5 py-2.5 min-h-12 text-base",
+	// Matches `md` (40px) by default — the common pairing (an icon button
+	// next to a default-sized text button) is the case this fixes.
+	icon: "p-2 min-h-10 min-w-10 aspect-square",
 };
 
-const PADDING_X: Record<Exclude<ButtonSize, "icon">, string> = {
-	sm: "px-3",
-	md: "px-4",
-	lg: "px-5",
-};
+// Default shape — a soft-rounded rect, the "classic squircle" idiom from
+// design.txt §4. Not the only option: pass radius/exponent/smoothing
+// directly for anything else (a pill is radius=999 exponent=2; a barely
+// rounded corner is radius=4; a boxier shape is a higher exponent).
+const DEFAULT_RADIUS = 10;
+const DEFAULT_EXPONENT = 5;
+const DEFAULT_SMOOTHING = 1;
+const DEFAULT_STROKE_WIDTH = 1;
 
 // The currentColor-fill idiom: the wrapper's text-color class IS the
 // Squircle's background. "solid" is a real, always-visible inverted surface
 // (near-black on a light page, near-white on a dark one) — not a hover-only
 // reveal, which read as invisible at rest against a near-white page.
 // "outline"/"ghost" stay transparent at rest and only tint on hover.
-const VARIANT_SURFACE: Record<ButtonVariant, string> = {
+//
+// "main"/"primary"/"secondary" are the three configurable color tiers
+// (design.txt §6): backed by `--color-button-*` custom properties in
+// globals.css rather than hardcoded hex here, so re-branding every button
+// in the app is a one-file edit. Each var already flips value under `.dark`
+// (same mechanism as `--border-hairline`), so one class covers both themes
+// — no `dark:` variant needed. "secondary" is the default for
+// functional/real buttons in this project (navbar CTA, hero buttons, Back,
+// Copy, ThemeToggle); "main" is the brand/CTA accent for the one or two
+// buttons per page that should stand out; "primary" is the near-inverse
+// surface tier. The style-guide's demo buttons deliberately show the full
+// range rather than defaulting to one.
+// "unstyled" has no entry here at all — see `showSquircle` below, it skips
+// this class (and the Squircle itself) entirely rather than applying a
+// no-op transparent one, since there's genuinely no surface to color.
+const VARIANT_SURFACE: Record<Exclude<ButtonVariant, "unstyled">, string> = {
 	solid: "text-[#1d1d1d] hover:text-zinc-700 dark:text-[#f0f0f0] dark:hover:text-zinc-300",
 	outline: "text-transparent hover:text-[#f0f0f0] dark:hover:text-[#171717]",
 	ghost: "text-transparent hover:text-[#f0f0f0] dark:hover:text-[#171717]",
+	main: "text-[var(--color-button-main)] hover:text-[var(--color-button-main-hover)]",
+	primary: "text-[var(--color-button-primary)] hover:text-[var(--color-button-primary-hover)]",
+	secondary: "text-[var(--color-button-secondary)] hover:text-[var(--color-button-secondary-hover)]",
 };
 
+// "unstyled" reuses the plain primary-text-color pair here (same as
+// outline/ghost) — for non-icon sizes there still needs to be *some* label
+// color, this is just the ordinary body-text one, not a "variant" look.
 const VARIANT_LABEL: Record<ButtonVariant, string> = {
 	solid: "text-[#f0f0f0] dark:text-[#1d1d1d]",
 	outline: "text-[#1d1d1d] dark:text-[#f0f0f0]",
 	ghost: "text-[#1d1d1d] dark:text-[#f0f0f0]",
+	main: "text-[var(--color-button-main-label)] hover:text-[var(--color-button-main-label-hover)]",
+	primary: "text-[var(--color-button-primary-label)] hover:text-[var(--color-button-primary-label-hover)]",
+	secondary: "text-[var(--color-button-secondary-label)]",
+	unstyled: "text-[#1d1d1d] dark:text-[#f0f0f0]",
 };
 
 // Icon-only buttons get their own coloring regardless of variant: muted at
@@ -58,12 +116,40 @@ const ICON_LABEL = "text-[#a1a1a1] group-hover:text-[#1d1d1d] dark:text-[#646464
 
 const FOCUS_RING = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0069cc]";
 
-const PRESS_FEEDBACK = "active:scale-[0.97] active:brightness-[1.04] hover:scale-[1.01] transition-[color,scale,filter] duration-200";
+// No `hover:scale-*` — a scale transform on an element containing text
+// causes the browser to re-hint/re-rasterize the glyphs at a fractional
+// pixel size on every frame of the transition, which reads as a visible
+// stutter on hover. Press feedback (`:active`) is brief enough that this
+// isn't noticeable, so scale/brightness stay there. `will-change-transform`
+// pre-warms a compositing layer for that transform instead of creating one
+// on the first press, which is its own small source of jank.
+const PRESS_FEEDBACK = "will-change-transform active:scale-[0.97] active:brightness-[1.04] transition-[color,scale,filter] duration-200";
 
 type BaseProps = {
 	variant?: ButtonVariant;
+	/** Starting padding/gap/text-size — override any part via className. */
 	size?: ButtonSize;
-	/** Fully-rounded stadium/circle shape instead of the proportional soft-rounded rect — applies to `icon` sizes too. */
+	/** Literal background/fill color — any valid CSS paint value (hex, a CSS var, a gradient). Overrides the variant's currentColor-driven surface and its hover tint entirely; you own the color at that point. */
+	background?: string;
+	/** Background used in dark mode instead of `background`. Falls back to `background` if omitted — pass this when a custom background needs a different value per theme rather than the same literal color in both. */
+	darkBackground?: string;
+	/** Literal label/icon color, paired with `background`. Overrides the variant's default label color. */
+	textColor?: string;
+	/** Label/icon color used in dark mode instead of `textColor`. Falls back to `textColor` if omitted. */
+	darkTextColor?: string;
+	/** Squircle corner radius in px. Default 10 (a soft-rounded rect); pass 999 for a full pill/circle. */
+	radius?: number;
+	/** Squircle superellipse exponent: 2 = true circle math, 5 = classic squircle curve, higher = boxier. */
+	exponent?: number;
+	/** Squircle corner smoothing (0–1), how far the curve reaches along each edge. */
+	smoothing?: number;
+	/** Adds a Squircle stroke (border), regardless of variant. Defaults to `true` for `outline`, `false` otherwise. */
+	border?: boolean;
+	/** Border color — any valid CSS paint value. Defaults to the shared `--border-hairline` token (flips with `.dark`). */
+	borderColor?: string;
+	/** Border width in px. Default 0.5 (the hairline convention, design.txt §1). */
+	strokeWidth?: number;
+	/** Shorthand for radius=999, exponent=2 — a full pill/circle. Ignored if `radius` or `exponent` is set explicitly. */
 	pill?: boolean;
 	fullWidth?: boolean;
 	leadingIcon?: React.ReactNode;
@@ -91,6 +177,16 @@ export type ButtonProps = ButtonAsAction | ButtonAsLink;
 export function Button({
 	variant = "solid",
 	size = "md",
+	background,
+	darkBackground,
+	textColor,
+	darkTextColor,
+	radius,
+	exponent,
+	smoothing = DEFAULT_SMOOTHING,
+	border,
+	borderColor,
+	strokeWidth,
 	pill = false,
 	fullWidth = false,
 	leadingIcon,
@@ -104,17 +200,55 @@ export function Button({
 	onClick,
 }: ButtonProps) {
 	const isIcon = size === "icon";
-	const height = HEIGHT[size];
-	const radius = pill ? 999 : radiusFor(height);
-	const exponent = pill ? 2 : 5;
+	const resolvedRadius = radius ?? (pill ? 999 : DEFAULT_RADIUS);
+	const resolvedExponent = exponent ?? (pill ? 2 : DEFAULT_EXPONENT);
+	const hasBorder = border ?? (variant === "outline" || variant === "secondary");
 	const isExternal = typeof href === "string" && isExternalHref(href);
-	const labelClasses = isIcon ? ICON_LABEL : VARIANT_LABEL[variant];
+	const isUnstyled = variant === "unstyled";
+
+	// Only needed to pick between background/darkBackground (and textColor/
+	// darkTextColor) — a literal color has no `dark:` variant of its own the
+	// way a Tailwind class or a `.dark`-scoped CSS var does, so resolving
+	// which one applies has to happen here instead. Skipped entirely (no
+	// hook, no mount check) when neither prop is used.
+	const needsThemeResolve = background !== undefined || textColor !== undefined;
+	const mounted = useMounted();
+	const { resolvedTheme } = useTheme();
+	const isDark = needsThemeResolve && mounted && resolvedTheme === "dark";
+	const resolvedBackground = background !== undefined ? (isDark ? (darkBackground ?? background) : background) : undefined;
+	const resolvedTextColor = textColor !== undefined ? (isDark ? (darkTextColor ?? textColor) : textColor) : undefined;
+
+	// A custom `background` replaces the currentColor-driven surface (and its
+	// hover tint) entirely — you're opting out of the variant's built-in
+	// color behavior, not layering on top of it. Same for `textColor` vs. the
+	// variant's default label color.
+	const labelColorClasses = resolvedTextColor ? undefined : isIcon ? ICON_LABEL : VARIANT_LABEL[variant];
+
+	// "unstyled" has no VARIANT_SURFACE entry (there's genuinely no surface
+	// to color) — guard the lookup rather than indexing with a variant the
+	// record doesn't define.
+	const surfaceColorClasses = resolvedBackground || isUnstyled ? undefined : VARIANT_SURFACE[variant];
+
+	// A bare "unstyled" button (no border, no custom background) skips the
+	// Squircle entirely — that's the whole point, no surface at all, not a
+	// transparent one still taking up a DOM node. It reappears the moment
+	// the caller opts back into a border or a literal background, since at
+	// that point there's something real for it to paint.
+	const showSquircle = !isUnstyled || hasBorder || !!resolvedBackground;
+
+	// Plain "unstyled" (no custom background) has no currentColor surface
+	// class, so `currentColor` would fall through to whatever text color is
+	// ambient — fall back to "none" so an unstyled+border combo renders as a
+	// stroke-only outline, not an accidental fill.
+	const fillColor = resolvedBackground ?? (isUnstyled ? "none" : "currentColor");
 
 	const surfaceClasses = cn(
-		"group relative inline-flex shrink-0 items-center",
-		VARIANT_SURFACE[variant],
+		"group relative inline-flex shrink-0 items-center justify-center",
+		surfaceColorClasses,
 		PRESS_FEEDBACK,
-		isIcon ? "aspect-square justify-center" : cn("gap-2", PADDING_X[size as Exclude<ButtonSize, "icon">], fullWidth ? (trailingIcon ? "w-full justify-between" : "w-full justify-center") : "justify-center"),
+		SIZE_CLASSES[size],
+		fullWidth && "w-full",
+		fullWidth && trailingIcon && "justify-between",
 		disabled && "pointer-events-none opacity-50",
 		FOCUS_RING,
 		className,
@@ -122,44 +256,54 @@ export function Button({
 
 	const content = (
 		<>
-			<Squircle
-				fill="currentColor"
-				stroke={variant === "outline" ? "var(--border-hairline)" : undefined}
-				strokeWidth={variant === "outline" ? 0.5 : undefined}
-				radius={radius}
-				smoothing={1}
-				exponent={exponent}
-				style={{ position: "absolute" }}
-				className="inset-0"
-			/>
-			{leadingIcon && <span className={cn("relative z-10 flex items-center justify-center", labelClasses)}>{leadingIcon}</span>}
-			{!isIcon && (
-				<span className={cn("relative z-10 text-xs leading-relaxed tracking-normal transition-colors duration-200", labelClasses)}>{children}</span>
+			{showSquircle && (
+				<Squircle
+					fill={fillColor}
+					stroke={hasBorder ? (borderColor ?? "var(--border-hairline)") : undefined}
+					strokeWidth={hasBorder ? (strokeWidth ?? DEFAULT_STROKE_WIDTH) : undefined}
+					radius={resolvedRadius}
+					smoothing={smoothing}
+					exponent={resolvedExponent}
+					style={{ position: "absolute" }}
+					className="inset-0"
+				/>
 			)}
-			{isIcon && <span className={cn("relative z-10 flex items-center justify-center", labelClasses)}>{children}</span>}
-			{trailingIcon && <span className={cn("relative z-10 flex items-center justify-center", labelClasses)}>{trailingIcon}</span>}
+			{leadingIcon && (
+				<span className={cn("relative z-10 flex items-center justify-center", labelColorClasses)} style={resolvedTextColor ? { color: resolvedTextColor } : undefined}>
+					{leadingIcon}
+				</span>
+			)}
+			<span
+				className={cn("relative z-10 leading-relaxed tracking-wide transition-colors duration-200", labelColorClasses)}
+				style={resolvedTextColor ? { color: resolvedTextColor } : undefined}
+			>
+				{children}
+			</span>
+			{trailingIcon && (
+				<span className={cn("relative z-10 flex items-center justify-center", labelColorClasses)} style={resolvedTextColor ? { color: resolvedTextColor } : undefined}>
+					{trailingIcon}
+				</span>
+			)}
 		</>
 	);
-
-	const style: React.CSSProperties = { height, width: isIcon ? height : undefined };
 
 	if (href) {
 		if (isExternal) {
 			return (
-				<a href={href} target="_blank" rel="noopener noreferrer" className={surfaceClasses} style={style} aria-label={ariaLabel} aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>
+				<a href={href} target="_blank" rel="noopener noreferrer" className={surfaceClasses} aria-label={ariaLabel} aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>
 					{content}
 				</a>
 			);
 		}
 		return (
-			<Link href={href} className={surfaceClasses} style={style} aria-label={ariaLabel} aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>
+			<Link href={href} className={surfaceClasses} aria-label={ariaLabel} aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>
 				{content}
 			</Link>
 		);
 	}
 
 	return (
-		<button type={type} onClick={onClick} disabled={disabled} className={surfaceClasses} style={style} aria-label={ariaLabel}>
+		<button type={type} onClick={onClick} disabled={disabled} className={surfaceClasses} aria-label={ariaLabel}>
 			{content}
 		</button>
 	);
@@ -186,17 +330,30 @@ function ArrowTopLeftIcon() {
 	);
 }
 
-export function Back({ href, label = "Back" }: { href?: string; label?: string }) {
+// `variant`/`size` (and everything else — radius, padding via className,
+// border, background, ...) default to the usual icon-button look but are
+// just defaults, not hardcoded: anything `Button` accepts passes straight
+// through via `...rest`, same idea as `Button` itself not locking any shape
+// in. Don't add one-off props here for things `Button` already exposes.
+type IconButtonOverrides = Omit<BaseProps, "children" | "variant" | "size">;
+
+export function Back({
+	href,
+	label = "Back",
+	variant = "secondary",
+	size = "icon",
+	...rest
+}: { href?: string; label?: string } & IconButtonOverrides & { variant?: ButtonVariant; size?: ButtonSize }) {
 	const router = useRouter();
 	if (href) {
 		return (
-			<Button href={href} variant="ghost" size="icon" aria-label={label}>
+			<Button href={href} variant={variant} size={size} aria-label={label} {...rest}>
 				<ArrowTopLeftIcon />
 			</Button>
 		);
 	}
 	return (
-		<Button onClick={() => router.back()} variant="ghost" size="icon" aria-label={label}>
+		<Button onClick={() => router.back()} variant={variant} size={size} aria-label={label} {...rest}>
 			<ArrowTopLeftIcon />
 		</Button>
 	);
@@ -233,7 +390,13 @@ function CheckIcon() {
 	);
 }
 
-export function Copy({ text, label = "Copy link" }: { text?: string; label?: string }) {
+export function Copy({
+	text,
+	label = "Copy link",
+	variant = "secondary",
+	size = "icon",
+	...rest
+}: { text?: string; label?: string } & IconButtonOverrides & { variant?: ButtonVariant; size?: ButtonSize }) {
 	const [isCopied, setIsCopied] = React.useState(false);
 
 	const handleCopy = async () => {
@@ -248,7 +411,7 @@ export function Copy({ text, label = "Copy link" }: { text?: string; label?: str
 	};
 
 	return (
-		<Button onClick={handleCopy} variant="ghost" size="icon" aria-label={label}>
+		<Button onClick={handleCopy} variant={variant} size={size} aria-label={label} {...rest}>
 			<AnimatePresence mode="popLayout" initial={false}>
 				<motion.span
 					key={isCopied ? "check" : "copy"}

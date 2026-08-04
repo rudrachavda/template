@@ -73,7 +73,11 @@ The whole system runs on **one size**: `text-sm`, almost always `font-medium`,
 
 `components/typography/header.tsx` is the one deliberate exception
 (`font-[590] leading-5.25`) — reserved for section headers, don't reuse the
-weight elsewhere.
+weight elsewhere. Its `className` prop only reaches the outer wrapper row
+(layout/spacing) — the title/date text have their own `titleClassName`/
+`dateClassName` for overriding font-size/weight/etc, same idea as `Text`'s
+`className` but as two explicit slots instead of one, since Header renders
+two independently-styled text elements, not one.
 
 Numbers/data columns: `font-mono` with `tabular-nums` for alignment.
 
@@ -119,11 +123,12 @@ global `*` rule sidesteps having to know which element ends up scrolling.
 - **Card/button squircle**: `radius={12} exponent={5} smoothing={1}`.
 - **Pill/circle**: `radius={999} exponent={2} smoothing={1}` (true circular math).
 
-`smoothing` is always `1`. For proportional corners at arbitrary sizes:
-`radius = round(height * 0.42)` (`squircle/tokens.ts`, `radiusFor()`) — this
-is what `Button` actually uses per size (`sm`/`md`/`lg` → 12/15/18px), not a
-flat `radius={12}` regardless of height. `pill`/`icon` sizes still force
-`radius={999}` (true circular math, `exponent={2}`).
+`smoothing` is always `1`. `squircle/tokens.ts`'s `radiusFor(height)` formula
+(`round(height * 0.42)`) is still there for anything that wants a radius
+proportional to its own height, but `Button` itself doesn't use it — its
+`radius`/`exponent`/`smoothing` are direct, independently-set props (default
+10/5/1) that don't key off height at all, the same way plain CSS
+`border-radius` doesn't scale with element size either. See §6.
 
 **Rule**: never pair a `Squircle` with a Tailwind `shadow-*`/`box-shadow` class
 — the shadow cuts inside the squircle's real edge. Use `filter: drop-shadow(...)`
@@ -170,16 +175,67 @@ wrapper's text-color class *is* its background, label/icon sit in a
     `--border-hairline` CSS var, so it flips with `.dark` without a
     `useTheme()` round-trip.
   - `ghost` — transparent, no border, tints on hover only.
-- **`size`**: `sm`/`md`/`lg` map to `CONTROL_H_SM`/`CONTROL_H`/`CONTROL_H_LG`
-  (28/36/44px, `squircle/tokens.ts`) with the corner radius derived via
-  `radiusFor(height)` so every size stays proportionally consistent. `icon`
-  is a fixed 36px square — same proportional radius as any other size, not
-  automatically round.
-- **`pill`**: forces `radius={999}` (a true circle/stadium, `exponent={2}`)
-  on *any* size, `icon` included. Shape is orthogonal to size — an icon
-  button defaults to the same soft-rounded corner as a text button; ask for
-  `pill` explicitly when a circular icon button is what you actually want
-  (e.g. an avatar-style trigger), don't assume every icon button is round.
+  - `main`/`primary`/`secondary` — the three **configurable color tiers**.
+    Each is backed by a `--color-button-*` custom property in
+    `globals.css` (`--color-button-main`/`-main-hover`/`-main-label`/
+    `-main-label-hover`, and the same set for `primary`/`secondary`)
+    rather than a hardcoded hex in `buttons.tsx`, referenced as
+    `text-[var(--color-button-main)]` etc. Every one of these vars is
+    redefined inside the `.dark` block (same mechanism as
+    `--border-hairline`), so **one class covers both themes** — no
+    `dark:` variant class needed on these three, unlike `solid`/`outline`/
+    `ghost`. Re-branding every button in the app — swapping the accent
+    color, lightening the secondary surface, whatever — is a one-file
+    edit to `globals.css`, not a `buttons.tsx` change. `secondary` is the
+    flat secondary-surface tier from §1 (`#f0f0f0`/`#171717`), the *same*
+    tone in both themes rather than an inversion, paired with a border by
+    default (see `border` below). `primary` is the near-white/near-black
+    surface tier (`#fafafa`/`#1d1d1d`), no border by default. `main` is
+    the brand/CTA accent (defaults to accent blue, `#0069cc` light /
+    `#50aef6` dark — lighter in dark mode for contrast against a dark
+    page, same idea as the `darkBackground` example further down) — for
+    the one or two buttons per page that should visually stand out from
+    everything else, not a default to reach for on every button.
+    **`secondary` is the default for functional/real buttons in this
+    project** — the navbar CTA, the hero's buttons, `Back`/`Copy`/
+    `ThemeToggle` are all `variant="secondary"`. `solid`/`outline`/`ghost`/
+    `main` exist and are demoed in `/style-guide` for range, but reach for
+    `secondary` first for anything actually shipped, unless there's a
+    specific reason (a hero wanting one strong CTA, say) to do otherwise.
+  - `unstyled` — no `VARIANT_SURFACE` entry and, by default, **no
+    `Squircle` at all**: not a transparent surface still taking up a DOM
+    node, genuinely nothing painted, just the bare label/icon plus the
+    usual press/focus feedback. For an affordance that shouldn't read as
+    a button until interacted with (an inline copy-link glyph next to
+    plain text, say). Pass `border` explicitly and it reappears as a
+    stroke-only outline (`fill="none"`, so it doesn't accidentally
+    inherit an ambient `currentColor` fill); pass `background` and it
+    reappears filled with that literal color. Label color falls back to
+    the plain body-text pair (`text-[#1d1d1d] dark:text-[#f0f0f0]`) for
+    non-icon sizes; icon sizes use the usual `ICON_LABEL` muted-to-full-
+    contrast treatment regardless of variant, same as every other variant.
+- **Shape is a first-class prop, not a closed set of two named variants.**
+  `radius`/`exponent`/`smoothing` pass straight through to the underlying
+  `Squircle` (defaults `10`/`5`/`1` — the "classic squircle" soft-rounded
+  rect). Want a pill? `radius={999} exponent={2}` (or the `pill` shorthand,
+  below). Want a barely-rounded corner, or something boxier? Pass whatever
+  `radius`/`exponent` you actually want — there's no enum gate to work
+  around. `strokeWidth` is exposed the same way for the `outline` variant's
+  border.
+- **`pill`**: shorthand for `radius={999} exponent={2}` (a true circle/stadium)
+  on *any* size, `icon` included — ignored if `radius` or `exponent` is set
+  explicitly, so it never fights a real override. Shape is orthogonal to
+  size: an icon button defaults to the same soft-rounded corner as a text
+  button; ask for `pill` (or `radius`/`exponent` directly) when a circular
+  icon button is what you actually want (e.g. an avatar-style trigger) —
+  don't assume every icon button is round.
+- **`size`**: `sm`/`md`/`lg`/`icon` set a *starting* `gap`/padding/text-size
+  className (`SIZE_CLASSES` in `buttons.tsx`) — a default, not a cap. There's
+  no forced width/height via inline style anywhere in `Button`, so
+  overriding any of it — `className="px-10 text-lg"`, a taller custom
+  button, whatever — always wins via the normal `cn()`/twMerge conflict
+  resolution instead of silently losing to a hardcoded value. Content sizes
+  the button naturally; nothing truncates or clips long or short labels.
 - **`href` auto-detects internal vs. external**: an internal path renders a
   Next `Link` (client-side nav, same tab); anything matching
   `isExternalHref()` (`http(s)://`, `mailto:`, `tel:`, protocol-relative
@@ -193,12 +249,40 @@ wrapper's text-color class *is* its background, label/icon sit in a
 - Icon-only buttons (`size="icon"`) get their own coloring regardless of
   variant — muted at rest, full contrast on hover:
   `text-[#a1a1a1] group-hover:text-[#1d1d1d] dark:text-[#646464] dark:group-hover:text-[#f0f0f0]`.
+- **`border`/`borderColor`/`strokeWidth`** — a `Squircle` stroke isn't tied to
+  `outline` anymore; any variant can have one. `border` defaults to `true`
+  for `outline` and `secondary`, `false` otherwise, but is an explicit
+  boolean override either way — a `solid` button with a border, or an
+  `outline` button with `border={false}`, both just work. `borderColor`
+  defaults to the shared `--border-hairline` token; `strokeWidth` defaults
+  to `1`.
+- **`background`/`textColor` (+ `darkBackground`/`darkTextColor`)** — the
+  escape hatch for a one-off color a named variant doesn't cover. `background`
+  replaces the currentColor-driven surface *entirely* (any valid CSS paint
+  value — hex, a CSS var, even a gradient string; `Squircle` already has a
+  clipped-div fallback for `linear-gradient(...)`/etc., see §4). Since a
+  literal color has no `dark:` variant of its own the way a Tailwind class or
+  a `.dark`-scoped CSS var does, `darkBackground`/`darkTextColor` are how to
+  give it one — they fall back to `background`/`textColor` when omitted, and
+  resolving between the pair is the *only* reason `Button` reads
+  `useTheme()`/`useMounted()` at all (skipped entirely, no hook overhead,
+  when neither prop is used). If a color should simply flip with `.dark`
+  everywhere it's used, define a CSS custom property instead (see
+  `--border-hairline`, §1) rather than passing `darkBackground` at every call
+  site.
 - Press feedback: `active:scale-[0.97] active:brightness-[1.04]
-  transition-[color,scale,filter] duration-200` (not `transition-[transform,...]`
-  — see the v4 gotcha in §7, `scale-*` is the same story as `-translate-y-*`).
-  Plain CSS, not `whileHover`/`whileTap` — `Button` has no framer-motion
-  dependency of its own, so it renders identically whether it's a `<button>`,
-  `<a>`, or `Link`.
+  transition-[color,scale,filter] duration-200`, plus `will-change-transform`
+  so the compositing layer for that transform is ready before the first
+  press rather than created on demand. Deliberately **no** `hover:scale-*` —
+  scaling an element that contains text forces the browser to re-hint/
+  re-rasterize the glyphs at a fractional pixel size on every frame of the
+  transition, which reads as a visible stutter on hover. `:active` is brief
+  enough that the same effect isn't noticeable, so scale/brightness stay
+  there and hover is color-only. Not `transition-[transform,...]` either —
+  see the v4 gotcha in §7, `scale-*` is the same story as `-translate-y-*`.
+  Plain CSS throughout, not `whileHover`/`whileTap` — `Button` has no
+  framer-motion dependency of its own, so it renders identically whether
+  it's a `<button>`, `<a>`, or `Link`.
 - `disabled` sets `pointer-events-none opacity-50` and, for link-mode,
   `aria-disabled`/`tabIndex={-1}` (an `<a>`/`Link` has no native `disabled`).
   Every render mode gets a visible `focus-visible:ring-2` — keyboard-focus
@@ -214,10 +298,18 @@ to be most wary of — on anything clicked often, it reads as fidgety, not
 delightful.
 
 `Back`/`Copy` are thin, generic wrappers on top of `Button`
-(`variant="ghost" size="icon"`), not one-off components: `Back` takes an
-optional `href` and falls back to `router.back()` when omitted (a "back"
-button doesn't always have one fixed destination), `Copy` copies the current
-URL and is a reasonable "copy/share link" affordance for any app.
+(`variant="secondary" size="icon"` by default), not one-off components:
+`Back` takes an optional `href` and falls back to `router.back()` when
+omitted (a "back" button doesn't always have one fixed destination), `Copy`
+copies the current URL and is a reasonable "copy/share link" affordance for
+any app. Everything else `Button` accepts — `variant`, `size`, `className`,
+`radius`, `border`, all of it — passes straight through via `...rest`
+(`IconButtonOverrides` in `buttons.tsx`), so neither one is a dead end if the
+default look doesn't fit. This matters in particular for shrinking one below
+the default icon size: `size="icon"`'s `min-h-10 min-w-10` (see above) is a
+floor `className`'s own padding can't get under by itself — pass
+`className="min-h-0 min-w-0 p-1"` (or whatever's wanted) to actually remove
+it, the way the hero's inline `Copy` next to the terminal-command text does.
 
 **A recurring question for anything new in `components/`**: is this
 behavior specific to one site's content (a portfolio's "back to my

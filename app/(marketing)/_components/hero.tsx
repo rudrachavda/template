@@ -6,6 +6,7 @@ import { Text } from "@/components/typography/text-styles";
 import { Button, Copy } from "@/components/ui/buttons";
 import { cn } from "@/lib/utils";
 import { container, item } from "@/components/motion/variants";
+import { MARKETING_MAX_WIDTH } from "./constants";
 
 // Decorative grid frame from nextjs.org's hero (nextjs.org/coolheaderelement(ignore).{html,css}),
 // reimplemented with our own tokens rather than the scraped markup verbatim —
@@ -15,11 +16,11 @@ import { container, item } from "@/components/motion/variants";
 // gradient) are copied as-is; things the scrape didn't capture (subtitle/
 // button/copy-row layout) are ours, built from our own Button/Text/Copy.
 //
-// Root: max-width: calc(1234px + 56px*2), padding: 0 56px, margin: 80px auto.
-const ROOT_MAX_WIDTH = "max-w-[1200px]";
+// Root width matches MARKETING_MAX_WIDTH, shared with Navbar/Footer so the
+// whole page lines up at the same edges.
 
 // Dash pattern: --line-width:1px, --line-gap:5px, 50% on / 50% off per repeat.
-const LINE_COLOR = "text-[rgba(29,29,29,0.12)] dark:text-[rgba(240,240,240,0.14)]";
+const LINE_COLOR = "text-[rgba(29,29,29,0.2)] dark:text-[rgba(240,240,240,0.2)]";
 
 function VerticalLine({ side, className }: { side: "left" | "right", className?: string }) {
     return (
@@ -84,7 +85,7 @@ function GridCircle({ className, rotate = 0 }: { className?: string; rotate?: 0 
 export function Hero() {
     return (
         <Section variant="full" className="overflow-hidden px-4 sm:px-8">
-            <div className={cn("relative mx-auto my-20 w-full", ROOT_MAX_WIDTH)}>
+            <div className={cn("relative mx-auto my-20 w-full", MARKETING_MAX_WIDTH)}>
                 <main className="flex flex-col items-center justify-start flex-initial w-full">
                     {/* Header Block */}
                     <div className="relative w-full h-16 sm:h-24">
@@ -103,9 +104,9 @@ export function Hero() {
                             <Text
                                 variant="title"
                                 as="h1"
-                                className="text-[clamp(3rem,5vw,4.75rem)] font-semibold tracking-tighter leading-none text-center text-balance"
+                                className="text-[clamp(3rem,5vw,4.75rem)] font-semibold tracking-tight leading-none text-center text-balance"
                             >
-								A React Framework for the web. 
+								Design Framework for the web. 
                             </Text>
                             <GridCircle className="-bottom-8 -right-8" rotate={180} />
                         </div>
@@ -127,13 +128,13 @@ export function Hero() {
                                 <GridCircle className="-bottom-8 -right-8" rotate={180} />
 
                                 <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-stretch justify-center gap-4 flex-initial w-full">
-                                    <Button href="/style-guide" variant="solid">Get started</Button>
-                                    <Button href="/style-guide" variant="outline">View components</Button>
+                                    <Button href="/style-guide" variant="secondary">Get started</Button>
+                                    <Button href="/style-guide" variant="secondary">View components</Button>
                                 </div>
                                 
                                 <div className="relative z-10 flex items-center justify-center gap-1 font-mono text-xs text-[#a1a1a1]">
                                     <span>▲ ~ npm run dev</span>
-                                    <Copy text="npm run dev" label="Copy dev command" />
+                                    <Copy text="npm run dev" label="Copy dev command" variant="unstyled" className="min-h-0 min-w-0 p-1" />
                                 </div>
                             </div>
                         </div>
