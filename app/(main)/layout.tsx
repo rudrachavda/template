@@ -7,14 +7,18 @@
 // client too sidesteps that entirely; `children` still passes through as
 // already-rendered content from further down the tree, same as any other
 // client layout wrapping server page content.
-import { HomeIcon, LayoutGridIcon } from "lucide-react";
+import { HomeIcon, TypeIcon, MousePointerClickIcon, ShapesIcon, LayersIcon, SparklesIcon } from "lucide-react";
 import { Sidebar, type SidebarNavItem } from "./_components/sidebar";
 import { ContentPane } from "./_components/content-pane";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const DEFAULT_ITEMS: SidebarNavItem[] = [
 	{ icon: HomeIcon, label: "Home", href: "/app" },
-	{ icon: LayoutGridIcon, label: "Components", href: "/style-guide" },
+	{ icon: TypeIcon, label: "Typography", href: "/components/typography" },
+	{ icon: MousePointerClickIcon, label: "Buttons", href: "/components/buttons" },
+	{ icon: ShapesIcon, label: "Squircle", href: "/components/squircle" },
+	{ icon: LayersIcon, label: "Shadow", href: "/components/shadow" },
+	{ icon: SparklesIcon, label: "Transitions", href: "/components/transitions" },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {

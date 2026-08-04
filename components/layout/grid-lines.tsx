@@ -12,7 +12,37 @@ import { cn } from "@/lib/utils";
 // Dash pattern: --line-width:1px, --line-gap:5px, 50% on / 50% off per repeat.
 export const GRID_LINE_COLOR = "text-[rgba(29,29,29,0.2)] dark:text-[rgba(240,240,240,0.2)]";
 
-export function VerticalLine({ side, className }: { side: "left" | "right"; className?: string }) {
+type LineProps = {
+	/**
+	 * Grow-in-on-scroll via Framer Motion's `whileInView`, matching the
+	 * marketing hero. Default `true` preserves that exact behavior for
+	 * hero.tsx. Pass `false` for anything living inside a *nested* scroll
+	 * container (the app shell's content pane, not the window itself) —
+	 * `whileInView`'s `IntersectionObserver` trigger doesn't reliably fire
+	 * or complete against a nested `overflow-y-auto` ancestor the way it
+	 * does against the real viewport, which left lines stuck part-grown
+	 * (a few px tall instead of the full height) inside the component
+	 * showcase pages — the actual cause of dividers reading as "missing"
+	 * there. `animate={false}` renders the fully-grown end state directly,
+	 * no motion/observer involved at all.
+	 */
+	animate?: boolean;
+};
+
+export function VerticalLine({ side, className, animate = true }: { side: "left" | "right"; className?: string } & LineProps) {
+	const lineClassName = cn(
+		"absolute top-[-100px] w-px origin-top",
+		"[background-image:repeating-linear-gradient(to_bottom,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
+		"[mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]",
+		GRID_LINE_COLOR,
+		side === "left" ? "left-0" : "right-0",
+		className,
+	);
+
+	if (!animate) {
+		return <div aria-hidden className={lineClassName} style={{ height: "calc(100% + 200px)" }} />;
+	}
+
 	return (
 		<motion.div
 			aria-hidden
@@ -21,46 +51,71 @@ export function VerticalLine({ side, className }: { side: "left" | "right"; clas
 			whileInView={{ height: "calc(100% + 200px)" }}
 			viewport={{ once: true }}
 			transition={{ duration: 1, ease: "easeOut" }}
-			className={cn(
-				"absolute top-[-100px] w-px origin-top",
-				"[background-image:repeating-linear-gradient(to_bottom,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
-				"[mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]",
-				GRID_LINE_COLOR,
-				side === "left" ? "left-0" : "right-0",
-				className,
-			)}
+			className={lineClassName}
 		/>
 	);
 }
 
-export function HorizontalLine({ className }: { className?: string }) {
+export function HorizontalLine({ className, animate = true }: { className?: string } & LineProps) {
+	const lineClassName = cn(
+		"absolute left-[-100px] top-0 h-px origin-left",
+		"[background-image:repeating-linear-gradient(to_right,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
+		"[mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]",
+		GRID_LINE_COLOR,
+	);
+
 	return (
 		<div className={cn("relative w-full h-px", className)}>
-			<motion.div
-				aria-hidden
-				// Start at 0 width, and grow to cover the container plus the 200px overhang (100px left + 100px right)
-				initial={{ width: 0 }}
-				whileInView={{ width: "calc(100% + 200px)" }}
-				viewport={{ once: true }}
-				transition={{ duration: 1.2, ease: "easeOut" }}
-				className={cn(
-					"absolute left-[-100px] top-0 h-px origin-left",
-					"[background-image:repeating-linear-gradient(to_right,currentColor_0,currentColor_2.5px,transparent_2.5px,transparent_5px)]",
-					"[mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]",
-					GRID_LINE_COLOR,
-				)}
-			/>
+			{animate ? (
+				<motion.div
+					aria-hidden
+					// Start at 0 width, and grow to cover the container plus the 200px overhang (100px left + 100px right)
+					initial={{ width: 0 }}
+					whileInView={{ width: "calc(100% + 200px)" }}
+					viewport={{ once: true }}
+					transition={{ duration: 1.2, ease: "easeOut" }}
+					className={lineClassName}
+				/>
+			) : (
+				<div aria-hidden className={lineClassName} style={{ width: "calc(100% + 200px)" }} />
+			)}
 		</div>
 	);
 }
 
-export function GridCircle({ className, rotate = 0 }: { className?: string; rotate?: 0 | 180 }) {
+// The path traces a 3/4 arc whose missing quarter faces the shape's own
+// bottom-right — placed at `-top-8 -left-8` with no transform, that gap
+// faces into the container's top-left corner, which is what makes it read
+// as "an arc wrapping around that corner" rather than a stray circle
+// fragment. `corner` below computes the matching position + mirror/rotate
+// for the other three corners from that same single fact, rather than
+// making every caller work out its own transform.
+type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+const CORNER_STYLE: Record<Corner, { position: string; transform?: string }> = {
+	"top-left": { position: "-top-8 -left-8" },
+	"top-right": { position: "-top-8 -right-8", transform: "scaleX(-1)" },
+	"bottom-left": { position: "-bottom-8 -left-8", transform: "scaleX(-1) rotate(180deg)" },
+	"bottom-right": { position: "-bottom-8 -right-8", transform: "rotate(180deg)" },
+};
+
+export function GridCircle({
+	className,
+	rotate = 0,
+	corner,
+}: {
+	className?: string;
+	/** Legacy API, still used by hero.tsx's two hand-placed circles — prefer `corner` for new call sites, it handles both position and mirroring together. */
+	rotate?: 0 | 180;
+	corner?: Corner;
+}) {
+	const resolved = corner ? CORNER_STYLE[corner] : null;
 	return (
 		<svg
 			aria-hidden="true"
 			viewBox="0 0 75 75"
-			className={cn("absolute size-16", GRID_LINE_COLOR, className)}
-			style={rotate ? { transform: `rotate(${rotate}deg)` } : undefined}
+			className={cn("absolute size-16", GRID_LINE_COLOR, resolved ? resolved.position : className)}
+			style={{ transform: resolved ? resolved.transform : rotate ? `rotate(${rotate}deg)` : undefined }}
 		>
 			<path
 				d="M74 37.5C74 30.281 71.8593 23.2241 67.8486 17.2217C63.838 11.2193 58.1375 6.541 51.4679 3.7784C44.7984 1.0158 37.4595 0.292977 30.3792 1.70134C23.2989 3.1097 16.7952 6.58599 11.6906 11.6906C6.58599 16.7952 3.1097 23.2989 1.70134 30.3792C0.292977 37.4595 1.0158 44.7984 3.7784 51.4679C6.541 58.1375 11.2193 63.838 17.2217 67.8486C23.2241 71.8593 30.281 74 37.5 74"

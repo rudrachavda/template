@@ -15,7 +15,7 @@ export function Footer() {
 				<Text
 					variant="secondary"
 					as="a"
-					href="/style-guide"
+					href="/components/typography"
 					className="transition-colors duration-200 hover:text-[#1d1d1d] dark:hover:text-[#f0f0f0]"
 				>
 					Components

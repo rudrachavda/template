@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Scraped reference material, not part of the app itself.
     "nextjs.org/**",
+    // Vendored transitions.dev demo snippets, imported as-is (see
+    // design.txt and app/(main)/components/transitions/page.tsx) — their
+    // own @ts-nocheck/style conventions aren't ours to enforce.
+    "components/transitions-dev/**",
   ]),
 ]);
 

@@ -152,6 +152,19 @@ Two separate, non-interchangeable systems — pick by what's casting the shadow:
   [filter:drop-shadow(0_1px_1px_rgba(28,29,33,0.13))_drop-shadow(0_6px_7px_rgba(28,29,33,0.07))]
   dark:[filter:none]
   ```
+  For the layered, `elevation`/`intensity`/`hexColor`-tunable version of that
+  same idea (rather than one hand-picked pair of values), use
+  `getLayeredDropShadow(hexColor, elevation, intensity)` — exported
+  alongside `getLayeredShadow` from `components/ui/shadow.tsx`, same
+  signature and tuning knobs, just emitting `drop-shadow(...)` layers
+  instead of `box-shadow` ones (see `/components/shadow`'s own demo tiles,
+  which use it on real `Squircle`s). Deliberately only 3 layers, not
+  `getLayeredShadow`'s 5: `drop-shadow` is a real per-pixel alpha-blur
+  filter, not a cheap compositor `box-shadow` — meaningfully more expensive
+  to paint, and the two heaviest tiers (70px/192px offsets) were sized for
+  a large decorative marketing card, not a card-sized UI surface. Disable
+  it in dark mode the same way as the hand-picked version above — the
+  hairline stroke on the `Squircle` is what gives it an edge there instead.
 
 ## 6. Buttons & Interactive Components (`components/ui/buttons.tsx`)
 
@@ -199,7 +212,7 @@ wrapper's text-color class *is* its background, label/icon sit in a
     **`secondary` is the default for functional/real buttons in this
     project** — the navbar CTA, the hero's buttons, `Back`/`Copy`/
     `ThemeToggle` are all `variant="secondary"`. `solid`/`outline`/`ghost`/
-    `main` exist and are demoed in `/style-guide` for range, but reach for
+    `main` exist and are demoed on `/components/buttons` for range, but reach for
     `secondary` first for anything actually shipped, unless there's a
     specific reason (a hero wanting one strong CTA, say) to do otherwise.
   - `unstyled` — no `VARIANT_SURFACE` entry and, by default, **no
@@ -375,11 +388,12 @@ three lines just because it has a long class string.
 
 `app/(main)/layout.tsx` composes two pieces, both in `_components/`:
 `Sidebar` (the nav rail) and `ContentPane` (the main content area). Every
-page under `(main)` — `/style-guide`, `/app`, anything added later — gets
+page under `(main)` — `/components/*`, `/app`, anything added later — gets
 this shell automatically; `(main)` has no `page.tsx` of its own, since that
 would collide with `(marketing)`'s at `/` (two route groups resolving the
 same path is a build error). The sidebar app's own pages live under
-`(main)/app/...`.
+`(main)/app/...`; the component-showcase pages live under
+`(main)/components/*` — see §11.
 
 - **Two-state collapse, not free-drag resize (desktop).** `Sidebar` toggles
   between a fixed icon-rail width (`w-16`) and a fixed expanded width
@@ -493,9 +507,120 @@ same path is a build error). The sidebar app's own pages live under
   already-rendered content from further down the tree works the same way
   through a client layout as through a server one.
 
+## 11. Component Showcase (`app/(main)/components/*`, `components/layout/showcase-grid.tsx`)
+
+Every design-system atom and every imported transitions-dev demo gets its
+own sidebar category and its own page — `typography`, `buttons`, `squircle`,
+`shadow`, `transitions` — rather than one long scrolling reference page.
+Each page is a scoped list of `ShowcaseTileDef`s (`title`, `description`,
+`children`, and two style escape hatches — `stageClassName`/
+`stageExtraClassName`, see below) handed to `<ShowcaseGrid tiles={...} />`.
+No numbered `Header` sections here — that convention stays on marketing-
+adjacent reference material, not a nav-driven page per topic.
+
+- **The grid reuses the marketing hero's decorative language, but isn't a
+  blind copy of it** (`components/layout/grid-lines.tsx` —
+  `VerticalLine`/`HorizontalLine`/`GridCircle`, extracted from `hero.tsx`
+  so both places stay visually identical instead of two hand-tuned copies
+  drifting apart). Explicitly **not** the bordered/shadowed "card" grid
+  from the reference screenshot that prompted this — no
+  `bg-*`/`border`/`shadow` anywhere in `showcase-grid.tsx`. Up to 3 tiles
+  per row; each row is treated like one of hero's stacked sections — a
+  `HorizontalLine` above it, `VerticalLine`s scoped to that row's own
+  height for column dividers (`side="left"` on the 2nd/3rd tile — the same
+  component, just called once per row instead of once for the whole page).
+  Two real differences from hero, both load-bearing, not stylistic:
+  - **Every line here passes `animate={false}`.** Hero's `whileInView`
+    grow-in entrance depends on an `IntersectionObserver` watching the real
+    browser viewport — correct for hero, a normal top-level scrolling
+    page, but this grid renders inside the app shell's *nested*
+    `overflow-y-auto` content pane (`content-pane.tsx`), and
+    `whileInView` doesn't reliably fire/complete against a nested scroll
+    container the way it does against the window. Lines were getting
+    stuck a few px into their grow animation — never reaching full
+    width/height — which is exactly what read as dividers being randomly
+    "missing" between some columns/rows. `animate={false}`
+    (`grid-lines.tsx`) renders the fully-grown end state directly, no
+    observer involved, so every real boundary between adjacent tiles has
+    a visible line, unconditionally.
+  - **Circles go on all 4 outer corners of the grid, not 2.** Hero only
+    needed 2 (top-left/bottom-right) for one decorative accent on an
+    elongated single column; a wide multi-row grid reads as more
+    intentionally "framed" with all 4. They're anchored to the outer
+    wrapper (`GridCircle corner="..."`, not per-row/per-tile) specifically
+    so a partial last row (fewer than 3 tiles) still puts the bottom
+    corners at the grid's actual right/bottom edge, not wherever the last
+    real tile's own cell happens to end.
+- **Not every tile is the same size.** `span: 2` widens a tile to 2 of the
+  row's 3 columns — for a demo that's genuinely wider than a third of the
+  grid (a search bar, a profile card), not a default to reach for. Chunking
+  is slot-based, not `items.length / 3`: a `span: 2` tile counts as 2 toward
+  each row's 3-slot budget, so it pairs with exactly one `span: 1` tile, or
+  sits alone (with a gap) if the remaining slot can't fit another wide one.
+- **`stageExtraClassName`** is how a tile reaches into a demo's own
+  hardcoded internal class names (`[&_.t-resize]:bg-...`) — several
+  imported components render an otherwise-invisible or browser-default-
+  styled element (a bare positioned `<div>`, an unstyled dropdown box, a
+  plain `<input>`) since they ship zero surface styling of their own by
+  design (bring-your-own-chrome snippets). `ShowcaseGrid` also applies one
+  baseline rule to every tile automatically: `[&>button]` (direct-child-only)
+  styling for each demo's own top-level trigger button, since 19/19 of the
+  transitions-dev components either render their trigger as a direct
+  sibling inside a bare Fragment or *are* the returned root button
+  themselves — verified against all 19 before relying on it, since a
+  broader `[&_button]` (all-descendants) selector would have also caught
+  nested buttons that need their own distinct styling (a modal's "Close", a
+  dropdown's menu items).
+- **`components/transitions-dev/*` are vendored, not this template's own
+  design system.** Copied as-is from a sibling project's `transitions-dev`
+  folder (itself sourced from transitions.dev) — self-contained snippets,
+  each injecting its own scoped `<style>` tag into `<head>` on first import,
+  each `// @ts-nocheck`. `eslint.config.mjs` ignores this whole directory
+  for the same reason `nextjs.org/**` (the scraped marketing reference) is
+  ignored — vendored code, not ours to hold to this repo's lint/style
+  conventions. Four *narrow, explicitly-commented* deviations from the
+  original source were still necessary, each noted in the affected file's
+  own header comment, not just here — two are bug fixes, two are additive:
+  - `skeleton-reveal.tsx` had a genuine syntax bug in the upstream
+    snippet — a comment inside its injected CSS template literal used
+    markdown-style backticks around `.is-resetting`, which (since the
+    whole styles block is itself a JS template literal) closed it early
+    and threw a `ReferenceError` at module evaluation, crashing on import.
+    Confirmed present in the original source, not introduced by copying it
+    here. Fixed by rewriting the comment in plain text.
+  - `clear-input.tsx` checked `document.documentElement.getAttribute
+    ('data-theme')` to pick its glow color, assuming a data-attribute theme
+    toggle; this template's `ThemeProvider` uses `attribute="class"` (see
+    `app/layout.tsx`), so that check always read `null` and the glow
+    silently rendered as light-mode regardless of the real theme. Changed
+    to check for the `dark` class instead.
+  - `menu-dropdown.tsx` originally took zero props — "Item 1"/"Item 2"
+    were hardcoded, so there was no way to show a real, context-appropriate
+    menu without forking the file. Added an optional `items` prop
+    (`{ label, icon? }[]`); omitting it falls back to the original two
+    hardcoded items, so this is additive, not a behavior change for
+    anything already using it as shipped.
+  - `number-loop.tsx` only ever replayed the *same* value on every click —
+    barely a "pop in" demo if the value it's transitioning to never
+    differs. Added an optional `onBeforeReplay` callback, fired
+    synchronously at the top of `replay()`, before the class gets
+    stripped for the reflow; a caller can change `value` from its own
+    state inside that callback (React batches it with this component's
+    own `setPlaying(false)`), so new digits are already in place when the
+    entrance re-triggers. Omitting it preserves the original
+    replay-same-value behavior exactly. (Also worth knowing, not a
+    deviation: the CSS only defines stagger delays for the first three
+    digits — pick ~3-character values, longer ones pop in together past
+    that point.)
+  - Everything else — behavior, structure, styling philosophy (bring your
+    own colors/sizing) — is untouched. Dark-mode gaps that are cosmetic
+    rather than broken (e.g. `text-shimmer.tsx`'s hardcoded highlight color,
+    `tooltip.tsx`'s hardcoded light background) are patched per-demo from
+    the *showcase* side instead, via `stageExtraClassName`'s
+    `dark:[--css-var:value]` overrides — the vendored file's own CSS
+    variables stay as shipped; only the value read in dark mode is
+    overridden, scoped to that one tile.
+
 ## Not yet built (later phases of this template, not this pass)
 
-`actions/`, `db/`, auth. The design system atoms are demoed on
-`app/(main)/style-guide/page.tsx`; `app/(marketing)/` is the public landing
-page built on top of them, separate from the sidebar app shell in
-`app/(main)/`.
+`actions/`, `db/`, auth.

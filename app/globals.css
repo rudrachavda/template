@@ -118,7 +118,7 @@
 
 .font-sans {
   /* Optical size locked to text mode, not display */
-  font-variation-settings: "opsz" 32;
+  font-variation-settings: "opsz" 14;
 
   font-feature-settings:
     "calt" 1,

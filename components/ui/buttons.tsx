@@ -83,7 +83,7 @@ const DEFAULT_STROKE_WIDTH = 1;
 // functional/real buttons in this project (navbar CTA, hero buttons, Back,
 // Copy, ThemeToggle); "main" is the brand/CTA accent for the one or two
 // buttons per page that should stand out; "primary" is the near-inverse
-// surface tier. The style-guide's demo buttons deliberately show the full
+// surface tier. The /components/buttons demo page deliberately shows the full
 // range rather than defaulting to one.
 // "unstyled" has no entry here at all — see `showSquircle` below, it skips
 // this class (and the Squircle itself) entirely rather than applying a
@@ -274,7 +274,7 @@ export function Button({
 				</span>
 			)}
 			<span
-				className={cn("relative z-10 leading-relaxed tracking-wide transition-colors duration-200", labelColorClasses)}
+				className={cn("relative z-10 leading-relaxed tracking-normal transition-colors duration-200", labelColorClasses)}
 				style={resolvedTextColor ? { color: resolvedTextColor } : undefined}
 			>
 				{children}
