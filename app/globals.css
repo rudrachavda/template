@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-space: "SpaceGrotesk", sans-serif;
+  --font-halo: "HaloGrotesk", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  /* Surface tiers — light / dark pairs, see design.txt §1 */
+  --color-background: #fefefe;
+  --color-background-dark: #121212;
+  --color-primary-surface: #fafafa;
+  --color-primary-surface-dark: #1d1d1d;
+  --color-secondary-surface: #f0f0f0;
+  --color-secondary-surface-dark: #171717;
+
+  /* Text */
+  --color-text-primary: #1d1d1d;
+  --color-text-primary-dark: #f0f0f0;
+  --color-text-secondary: #646464;
+  --color-text-muted: #a1a1a1;
+
+  /* Accent palette — gradients/status/typer effects, not surfaces */
+  --color-accent-purple: #9659b9;
+  --color-accent-pink: #ee98b7;
+  --color-accent-navy: #1a2b3b;
+  --color-accent-blue: #0069cc;
+  --color-accent-blue-light: #50aef6;
+  --color-accent-blue-lighter: #abcdef;
+  --color-accent-green: #169b40;
+  --color-accent-green-dark: #0a461d;
+  --color-accent-yellow: #fcd609;
+  --color-accent-orange: #fc9601;
+  --color-accent-orange-dark: #b64400;
+  --color-accent-red: #fc3e2f;
+  --color-accent-link: #0088ff;
+}
+
+/*
+ * Plain CSS custom properties (not @theme) for values JS/SVG needs as a raw
+ * paint string rather than a Tailwind class — e.g. Squircle's `stroke` prop.
+ * These flip with the same `.dark` class next-themes toggles, no useTheme()
+ * round-trip required.
+ */
+:root {
+  --border-hairline: rgba(225, 228, 232, 0.8);
+}
+
+.dark {
+  --border-hairline: rgba(29, 29, 29, 0.8);
+}
+
+::selection {
+  background-color: #ededed;
+  color: #1d1d1d;
+}
+
+@font-face {
+  font-family: "SpaceGrotesk";
+  src: url("../public/fonts/SpaceGrotesk-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "HaloGrotesk";
+  src: url("../public/fonts/HaloGrotesk-Regular.otf") format("opentype");
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.font-sans {
+  /* Optical size locked to text mode, not display */
+  font-variation-settings: "opsz" 14;
+
+  font-feature-settings:
+    "calt" 1,
+    "ccmp" 1,
+    "zero" 0,
+    "tnum" 0,
+    "pnum" 0,
+    "frac" 0,
+    "dnom" 0,
+    "numr" 0,
+    "sups" 0,
+    "subs" 0,
+    "sinf" 0,
+    "cv01" 1,
+    "cv02" 1,
+    "cv03" 0,
+    "cv04" 0,
+    "cv05" 0,
+    "cv06" 1,
+    "cv07" 0,
+    "cv08" 0,
+    "cv09" 1,
+    "cv10" 0,
+    "cv11" 1,
+    "cv12" 1,
+    "cv13" 1,
+    "ss01" 0,
+    "ss02" 0,
+    "ss03" 0,
+    "ss04" 0,
+    "ss05" 0,
+    "ss06" 0,
+    "ss07" 0,
+    "ss08" 0,
+    "dlig" 0,
+    "case" 0,
+    "cpsp" 0,
+    "c2sc" 0,
+    "salt" 0,
+    "locl" 0,
+    "ordn" 0,
+    "aalt" 0;
+}
+
+body {
+  overflow-x: hidden;
+}
