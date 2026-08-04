@@ -44,7 +44,7 @@ export default function SquirclePage() {
 	return (
 		<Section variant="full" className="px-4 py-8 sm:px-8">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-2 ml-6 md:ml-8">
 					<Text variant="title">Squircle</Text>
 					<Text variant="subtitle">A true superellipse via SVG path — see design.txt §4.</Text>
 				</div>

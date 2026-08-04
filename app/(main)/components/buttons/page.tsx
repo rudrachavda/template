@@ -55,7 +55,7 @@ const TILES: ShowcaseTileDef[] = [
 		description: "Back, Copy, and ThemeToggle — thin wrappers over Button (variant=\"secondary\" size=\"icon\").",
 		children: (
 			<div className="flex flex-wrap items-center justify-center gap-3">
-				<Back href="/app" />
+				<Back href="/" />
 				<Copy />
 				<ThemeToggle />
 			</div>
@@ -119,7 +119,7 @@ export default function ButtonsPage() {
 	return (
 		<Section variant="full" className="px-4 py-8 sm:px-8">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-2 ml-6 md:ml-8">
 					<Text variant="title">Buttons</Text>
 					<Text variant="subtitle">One general-purpose primitive — shape, color, and border are all open props, not a closed set of variants. See design.txt §6.</Text>
 				</div>

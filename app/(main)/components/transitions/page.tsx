@@ -372,7 +372,7 @@ export default function TransitionsPage() {
 	return (
 		<Section variant="full" className="px-4 py-8 sm:px-8">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-12">
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-2 ml-6 md:ml-8">
 					<Text variant="title">Transitions</Text>
 					<Text variant="subtitle">
 						Self-contained demos from transitions.dev — each ships its own scoped CSS and interaction, imported as-is into components/transitions-dev/.

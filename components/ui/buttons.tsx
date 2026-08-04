@@ -105,7 +105,7 @@ const VARIANT_LABEL: Record<ButtonVariant, string> = {
 	outline: "text-[#1d1d1d] dark:text-[#f0f0f0]",
 	ghost: "text-[#1d1d1d] dark:text-[#f0f0f0]",
 	main: "text-[var(--color-button-main-label)] hover:text-[var(--color-button-main-label-hover)]",
-	primary: "text-[var(--color-button-primary-label)] hover:text-[var(--color-button-primary-label-hover)]",
+	primary: "text-[var(--color-button-primary-label)]",
 	secondary: "text-[var(--color-button-secondary-label)]",
 	unstyled: "text-[#1d1d1d] dark:text-[#f0f0f0]",
 };
