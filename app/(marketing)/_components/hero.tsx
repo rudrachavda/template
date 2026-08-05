@@ -74,7 +74,7 @@ export function Hero() {
                                 </div>
                                 
                                 <div className="relative z-10 flex items-center justify-center gap-1 font-mono text-xs text-[#a1a1a1]">
-                                    <span>▲ ~ npm run dev</span>
+                                    <span>▲ ~ inspired by nextJS</span>
                                     <Copy text="npm run dev" label="Copy dev command" variant="unstyled" className="min-h-0 min-w-0 p-1" />
                                 </div>
                             </div>

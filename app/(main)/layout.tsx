@@ -11,6 +11,7 @@ import { HomeIcon, TypeIcon, MousePointerClickIcon, ShapesIcon, LayersIcon, Spar
 import { Sidebar, type SidebarNavItem } from "./_components/sidebar";
 import { ContentPane } from "./_components/content-pane";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Back } from "@/components/ui/buttons";
 
 const DEFAULT_ITEMS: SidebarNavItem[] = [
 	{ icon: HomeIcon, label: "Home", href: "/app" },
@@ -24,7 +25,7 @@ const DEFAULT_ITEMS: SidebarNavItem[] = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex h-screen w-full overflow-hidden">
-			<Sidebar items={DEFAULT_ITEMS} title="Template" footer={<ThemeToggle />} />
+			<Sidebar items={DEFAULT_ITEMS} title="Template" footer={<Back/>} />
 			<ContentPane>{children}</ContentPane>
 		</div>
 	);

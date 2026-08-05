@@ -43,8 +43,18 @@ import { VerticalLine, HorizontalLine, GridCircle } from "@/components/layout/gr
 // trigger renders as a bare unstyled browser `<button>`, since these are
 // self-contained snippets with no styling of their own beyond the specific
 // transition they demonstrate.
-const DEFAULT_TRIGGER_STYLE =
-	"[&>button]:rounded-full [&>button]:bg-[#f0f0f0] [&>button]:px-3 [&>button]:py-1.5 [&>button]:text-xs [&>button]:font-medium [&>button]:text-[#1d1d1d] [&>button]:transition-colors [&>button]:duration-200 [&>button]:hover:bg-[#e5e5e5] dark:[&>button]:bg-[#171717] dark:[&>button]:text-[#f0f0f0] dark:[&>button]:hover:bg-[#1f1f1f]";
+//
+// `order-last` is what actually unifies every trigger's *position*, not
+// just its look: several of these vendor snippets render the button before
+// their content in the Fragment (`<button>Animate</button><div>...</div>`),
+// a couple render it after — `order-last` sorts the button to the end of
+// its flex column regardless of that DOM order, so every demo reads as
+// "content, then the button that plays it" (the error-shake tile is the
+// reference). This only works paired with `flex-col` on the tile — never
+// `flex-col-reverse`, which would flip the already-sorted sequence and put
+// the button back on top.
+export const DEFAULT_TRIGGER_STYLE =
+	"[&>button]:order-last [&>button]:rounded-full [&>button]:bg-[#f0f0f0] [&>button]:px-3 [&>button]:py-1.5 [&>button]:text-xs [&>button]:font-medium [&>button]:text-[#1d1d1d] [&>button]:transition-colors [&>button]:duration-200 [&>button]:hover:bg-[#e5e5e5] dark:[&>button]:bg-[#171717] dark:[&>button]:text-[#f0f0f0] dark:[&>button]:hover:bg-[#1f1f1f]";
 
 export type ShowcaseTileDef = {
 	title: string;

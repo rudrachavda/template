@@ -19,7 +19,8 @@ import { useState } from "react";
 import { BellIcon, HeartIcon, LayoutGridIcon, ListIcon, KanbanSquareIcon, SearchIcon, PencilIcon, Trash2Icon, SparkleIcon } from "lucide-react";
 import { Section } from "@/components/layout/section";
 import { Text } from "@/components/typography/text-styles";
-import { ShowcaseGrid, type ShowcaseTileDef } from "@/components/layout/showcase-grid";
+import { ShowcaseGrid, DEFAULT_TRIGGER_STYLE, type ShowcaseTileDef } from "@/components/layout/showcase-grid";
+import { cn } from "@/lib/utils";
 
 import { InputShake } from "@/components/transitions-dev/error-shake";
 import { SuccessCheck } from "@/components/transitions-dev/success-check";
@@ -65,11 +66,14 @@ const REVENUE_VALUES = ["247", "812", "365", "594"];
 function NumberPopInDemo() {
 	const [index, setIndex] = useState(0);
 	return (
-		<div className="flex flex-col items-center gap-3">
+		// NumberPopIn's own trigger sits one level deeper than usual (a sibling
+		// of the digit group, inside this div, not a direct child of the
+		// stage) — so it needs its own copy of DEFAULT_TRIGGER_STYLE's
+		// order-last + pill classes rather than picking them up from the
+		// stage's `[&>button]` rule, which only reaches direct children.
+		<div className={cn("flex flex-col items-center gap-3", "[&_.t-digit-group]:text-4xl [&_.t-digit-group]:font-semibold [&_.t-digit-group]:tabular-nums", DEFAULT_TRIGGER_STYLE)}>
 			<Text variant="label">New signups</Text>
-			<div className="flex flex-col items-center gap-3 text-4xl font-semibold tabular-nums">
-				<NumberPopIn value={REVENUE_VALUES[index]} onBeforeReplay={() => setIndex((i) => (i + 1) % REVENUE_VALUES.length)} />
-			</div>
+			<NumberPopIn value={REVENUE_VALUES[index]} onBeforeReplay={() => setIndex((i) => (i + 1) % REVENUE_VALUES.length)} />
 		</div>
 	);
 }
@@ -93,7 +97,7 @@ const FEEDBACK_TILES: ShowcaseTileDef[] = [
 				/>
 			</InputShake>
 		),
-		stageExtraClassName: "flex-col-reverse gap-3 [&_.t-error-msg]:mt-1 [&_.t-error-msg]:text-xs [&_.t-error-msg]:text-[#fc3e2f]",
+		stageExtraClassName: "flex-col gap-3 [&_.t-error-msg]:mt-1 [&_.t-error-msg]:text-xs [&_.t-error-msg]:text-[#fc3e2f]",
 	},
 	{
 		title: "Success check",
@@ -102,7 +106,11 @@ const FEEDBACK_TILES: ShowcaseTileDef[] = [
 			<SuccessCheck>
 				<span className="flex size-14 items-center justify-center rounded-full bg-[#169b40]/10">
 					<svg viewBox="0 0 24 24" fill="none" className="size-7 text-[#169b40]" xmlns="http://www.w3.org/2000/svg">
-						<path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+						{/* Point order reversed from the usual "M20 6L9 17L4 12" check path —
+						    stroke-dasharray/dashoffset draws in path-definition order, so the
+						    normal direction animates top-right-down-to-vertex first. Starting
+						    at the bottom vertex instead makes the draw read bottom-to-top. */}
+						<path d="M4 12L9 17L20 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 					</svg>
 				</span>
 			</SuccessCheck>
@@ -181,11 +189,12 @@ const TEXT_TILES: ShowcaseTileDef[] = [
 	{
 		title: "Text state swap",
 		description: "A status line for a background job — click Next to cross-fade between two states.",
-		children: (
-			<div className="flex flex-col items-center gap-3 text-sm font-medium">
-				<TextStatesSwap />
-			</div>
-		),
+		// Rendered directly (not wrapped in an extra div) so its "Next" button
+		// is a direct child of the stage — that's what lets it pick up
+		// DEFAULT_TRIGGER_STYLE's shared pill + order-last positioning instead
+		// of needing its own copy.
+		children: <TextStatesSwap />,
+		stageExtraClassName: "flex-col gap-3 text-sm font-medium",
 	},
 ];
 
@@ -196,7 +205,7 @@ const LAYOUT_TILES: ShowcaseTileDef[] = [
 		children: <CardResize />,
 		stageClassName: "min-h-56",
 		stageExtraClassName:
-			"flex-col-reverse gap-3 [&_.t-resize]:flex [&_.t-resize]:flex-col [&_.t-resize]:justify-end [&_.t-resize]:overflow-hidden [&_.t-resize]:rounded-xl [&_.t-resize]:border [&_.t-resize]:border-[rgba(225,228,232,0.8)] [&_.t-resize]:bg-[#fafafa] [&_.t-resize]:p-4 [&_.t-resize]:dark:border-[rgba(29,29,29,0.8)] [&_.t-resize]:dark:bg-[#1d1d1d]",
+			"flex-col gap-3 [&_.t-resize]:flex [&_.t-resize]:flex-col [&_.t-resize]:justify-end [&_.t-resize]:overflow-hidden [&_.t-resize]:rounded-xl [&_.t-resize]:border [&_.t-resize]:border-[rgba(225,228,232,0.8)] [&_.t-resize]:bg-[#fafafa] [&_.t-resize]:p-4 [&_.t-resize]:dark:border-[rgba(29,29,29,0.8)] [&_.t-resize]:dark:bg-[#1d1d1d]",
 	},
 	{
 		title: "Panel reveal",
@@ -213,7 +222,7 @@ const LAYOUT_TILES: ShowcaseTileDef[] = [
 				</div>
 			</PanelReveal>
 		),
-		stageClassName: "min-h-56 flex-col-reverse gap-3",
+		stageClassName: "min-h-56 flex-col gap-3",
 	},
 	{
 		title: "Modal open/close",

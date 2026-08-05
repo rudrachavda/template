@@ -36,12 +36,15 @@ const __TRANSITION_STYLES = `
 /* overflow: visible keeps the stroke from clipping while it
    draws; display: block kills the inline whitespace under SVGs. */
 .t-success-check svg { display: block; overflow: visible; }
-/* Stroke-draw setup. Replace 20 with the result of
-   path.getTotalLength() for your path; round caps mean any
-   sub-pixel overshoot is invisible. */
+/* Stroke-draw setup — 23, not the snippet's original 20: the file's own
+   comment says to replace it with path.getTotalLength() for your path, and
+   our checkmark (M20 6L9 17L4 12) measures ~22.63, not 20. Left at 20, that
+   mismatch meant stroke-dashoffset never fully hid the path at rest — a
+   ~2.6-unit sliver of the tail end was visible before Animate was even
+   clicked, and the "draw" animated over the wrong distance for this path. */
 .t-success-check svg path {
-  stroke-dasharray: 20;
-  stroke-dashoffset: 20;
+  stroke-dasharray: 23;
+  stroke-dashoffset: 23;
 }
 
 .t-success-check[data-state="in"] {
